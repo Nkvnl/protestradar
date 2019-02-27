@@ -1,21 +1,25 @@
 //DATA
-const citiesArr = require('./data/locations.js');
+const cities = require('./data/locations.js');
+const citiesArr = cities.a
+const e = [];
 const rssFeeds = require('./data/feeds.js');
-const keyWordsArr = require('./data/keywords.js')
+const keyWordsArr = require('./data/keywords.js');
 //MODELS
 const dataEntry = require("./models/dataEntry");
-//PACKAGES
-var NodeGeocoder = require('node-geocoder');
- 
+//GEOCODER API
 var options = {
   provider: 'google',
- 
   httpAdapter: 'https', 
   apiKey: 'AIzaSyBDyUrjezuxZCyN3QnNcpAG1x8ZtBqiXWU', 
   formatter: null         
 };
- 
-var geocoder = NodeGeocoder(options);
+//PACKAGES
+const bodyParser = require("body-parser");
+const LanguageDetect = require('languagedetect');
+const lngDetector = new LanguageDetect();
+const translate = require('@vitalets/google-translate-api');
+const NodeGeocoder = require('node-geocoder');
+const geocoder = NodeGeocoder(options);
 const express = require("express");
 const path = require('path');
 const logger = require('morgan');
@@ -30,7 +34,9 @@ var protestsArr = [];
 var filteredArr = [];
 var dataEntryObj = {};
 // var day = 86400000;
+var translateCount = 0;
 var day = 864;
+var timeOut = {status:false,count:0,timer:1000};
 var count = 0;
 var a = null;
 var scanCount = 0;
@@ -45,9 +51,11 @@ var date = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate();
 var time = today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds();
 var date = date+' '+time;
 var app = express();
-//MONGODB
+//DATABASE SETUP
 mongoose.connect("mongodb://protestradar.com:fVEhZm2ZbqFZveE@ds349045.mlab.com:49045/protests");
 //APP SETUP
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
 app.engine('.hbs', expressHbs({defaultLayout: 'layout', extname: '.hbs'}));
 app.set('view engine', '.hbs');
 app.use(logger('dev'));
@@ -56,22 +64,115 @@ app.use(express.static(path.join(__dirname, 'public')));
 setInterval(feedData,600000);
 // setInterval(setToExpired,600000);
 //ROUTES
-app.get('/',function(req,res){
-  dataEntry.find({status:'accepted'},function(err,events){
-    res.render('index',{events:events})
-  })
+
+function detectLanguage(input){
+  let a = lngDetector.detect(input);
+  if(a !== undefined || !a){
+  let language = a[0][0];
+      translateCount++
+  if(language === 'french'|| language === 'italian' || language === 'portuguese' || language === 'german' || language === 'dutch' || language === 'spanish'){
+    setTimeout(function() {
+      if(timeOut.status === false){
+      return translateText(language,input);
+      }
+    }, 1000 * translateCount)
+  } else if(timeOut.status === true) {
+    checkTimeout();
+  }
+  } else {
+    return undefined;
+  }
+}
+
+var f = citiesArr.splice(1,1)
+console.log(f)
+
+function checkTimeout(){
+  setTimeout(function() {
+    timeOut.status = false;
+    timeOut.timer = 1000;
+  },100000)
+}
+
+function translateText(language,input){
+  a++
+  translate(input, {from: language, to: 'en'}).then(res => {
+      console.log(res.from.text.value);
+      return res.from.text.value;
+  }).catch(err => {
+    if(err.code === 'BAD_REQUEST'){
+      console.log(err.code)
+      console.log(timeOut.status)
+      timeOut.status = true;
+      timeOut.timer = 100000;
+      timeOut.count++
+      return input
+    } else {
+      console.log(err)
+      return input
+    }
+  });
+}
+
+app.get('/', function(req, res, next){
+  dataEntry.aggregate(
+     {
+      $match : {$or:[{status:'Ongoing'},{status:'Inactive'}]}},
+      { $group:{"_id": "$place", 
+      count:{$sum:1},
+      headline:{$first:"$headline"},
+      status:{$first:"$status"},
+      latitude:{$first:"$latitude"},
+      longitude:{$first:"$longitude"},
+      link:{$push:"$link"},
+      from:{$first:"$date"},
+      untill:{$last:"$date"}
+      },
+      },
+    { $sort: {count: -1}},
+    function(err,protests){
+      if(err){
+        console.log(err)
+      } else {
+        dataEntry.find(function(err,results){
+    res.render('index',{protests:protests,results:results});
+    })
+  };
+});
 });
 
 app.get('/accept/:id',function(req,res){
   dataEntry.findById(req.params.id,function(err,acceptedResult){
-    geocoder.geocode(acceptedResult.place, function(err, coordinates) {
-      console.log(coordinates)
-      console.log(typeof coordinates)
-      dataEntry.findByIdAndUpdate(req.params.id,{$set:{locationInfo:coordinates,status:'accepted'}},function(err,saved){
-        console.log(saved)
-      res.redirect('/')
+    geocoder.geocode(acceptedResult.place, function(err, a) {
+      if(err){
+        e.push(err)
+      }
+      let coordinates = a[0]
+      dataEntry.findByIdAndUpdate(req.params.id,{$set:{latitude:coordinates.latitude,longitude:coordinates.longitude,GPID:coordinates.extra.googlePlaceId,status:'Ongoing',place:coordinates.formattedAddress}},function(err,saved){
+        res.redirect('/')
       })
     })
+  });
+});
+
+
+app.post('/edit/send', function(req,res){
+  cities.addEntry(req.body.place)
+  geocoder.geocode(req.body.place, function(err, a) {
+    if(err){
+      e.push(err)
+    }
+    let coordinates = a[0]
+    dataEntry.findByIdAndUpdate(req.body.id,{$set:{latitude:coordinates.latitude,longitude:coordinates.longitude,GPID:coordinates.extra.googlePlaceId,status:'Ongoing',place:coordinates.formattedAddress}},function(err,saved){
+      res.redirect('/')
+    })
+  });
+});
+
+app.get('/edit/:id',function(req,res){
+  dataEntry.findById(req.params.id,function(err,edit){
+    cities.deleteEntry(edit.place)
+    res.render('edit',{edit:edit})
   });
 });
 
@@ -81,22 +182,36 @@ app.get('/decline/:id',function(req,res){
   })
 });
 //FUNCTIONS
+function findAndRemove(input){
+  var found = citiesArr.find(function(element) {
+    return element === input
+  });
+  if(found){
+  let a = citiesArr.indexOf(found)
+  citiesArr.splice(a,1)
+  }
+}
+
 function feedData(){
   scanCount++
-  console.log('Scanning for protests... #' + scanCount )
+  console.log('Scanning for protests... #' + scanCount + " @" + date )
 rssFeeds.forEach(function(elem){
 (async () => {
   try{
   let feed = await parser.parseURL(elem);
   feed.items.forEach(item => {
+    // if(timeOut.status === true){
+      // console.log('no translation')
     returnedValue = checkString(item.title)
+    // } else {
+    // let translatedText = detectLanguage(item.title)
+    // returnedValue = checkString(translatedText)
+    // if(translatedText === undefined || returnedValue === undefined){};
+    // }
     if(item.date){
     let a = item.date.split('+',1);
     date = a[0].replace(/T|Z/," ");
     } 
-    if(returnedValue.title){
-    console.log('Found ' + returnedValue.title)
-    }
     if(returnedValue.length >= 2 && returnedValue[0].type !== returnedValue[1].type){
       dataEntryObj = {date : date,timeStamp:timeStamp,headline : item.title,link : item.link, content:item.contentSnippet};
       if(returnedValue[0].type === 'City'){
@@ -120,7 +235,7 @@ function find(dataEntryObj){
     dataEntry.find({headline:dataEntryObj.headline},function(err,res){
       if(!err){
         if(res.length > 0){
-          console.log('Dupe ' + res)
+          console.log('Dupe')
         } else {
           return saveToDB(dataEntryObj)
         }
@@ -130,8 +245,9 @@ function find(dataEntryObj){
   });
 }
 
+
 function saveToDB(dataEntryObj){
-  console.log(dataEntryObj)
+  console.log('save')
   var newDataEntry = new dataEntry({
     date:dataEntryObj.date,
     timeStamp:dataEntryObj.timeStamp,
@@ -165,7 +281,7 @@ function verification(c){
         to: 'niek_losenoord@hotmail.com',
         subject: c.headline + 'ID A7U623',
         text: '',
-        html: "<a href='https://protests-niekavanlosenoord.c9users.io/accept/" + c.id + "'>  Accept  </a><a href='https://protests-niekavanlosenoord.c9users.io/decline/" + c.id + "'>  Decline  </a><h5>" + c.headline + "</h5><h5>" + c.link + "</h5><h5>" + c.event + "</h5><h5>" + c.place + "</h5><h5>" + c.date + "</h5><h5>" + c.content + "</h5>" 
+        html: "<a href='https://protests-niekavanlosenoord.c9users.io/accept/" + c.id + "'>  Accept  </a><a href='https://protests-niekavanlosenoord.c9users.io/edit/" + c.id + "'>  Edit  </a> <h5>" + c.headline + "</h5><h5>" + c.link + "</h5><h5>" + c.event + "</h5><h5>" + c.place + "</h5><h5>" + c.date + "</h5><h5>" + c.content + "</h5>" 
     };
     dataEntryObj={};
     transporter.sendMail(mailOptions, (err, info) => {
@@ -187,7 +303,7 @@ function checkString(e){
     }
     return protestsArr;
   } else {
-    console.log('Undefined input')
+    // console.log('Undefined input')
   }
 }
 
@@ -263,15 +379,13 @@ function removeDuplicates(){
   })
 }
 
-
-
 //SERVER
 app.listen(process.env.PORT, process.env.IP, function() {
     console.log("https://www.protestradar.com server online");
 })
 
 // getLocation('France')
-feedData()
+// feedData()
 // removeDuplicates()
 // cleanDataBase('pending');
 

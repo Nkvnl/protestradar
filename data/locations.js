@@ -1,4 +1,4 @@
-module.exports = [
+a = [
   "Afghanistan",
     "Herat",
     "Kabul",
@@ -50040,7 +50040,6 @@ module.exports = [
     "Polajewo",
     "Polanka Wielka",
     "Polczyn-Zdroj",
-    "Police",
     "Polkowice",
     "Polomia",
     "Polskie",
@@ -83987,4 +83986,20 @@ module.exports = [
     "Mufakose",
     "Mutare",
     "Victoria Falls"
-  ]
+  ];
+  
+
+  
+
+module.exports = {
+  a,
+  deleteEntry(i){
+    a.splice(i,1)
+  },
+  addEntry(i){
+    a.push(i)
+  }
+}
+  
+   
+   

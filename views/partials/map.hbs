@@ -1,0 +1,381 @@
+<div id="googleMap" style="width:100%;height:100vh;"></div>
+<div id="legend">
+    <img src="../icons/marker-red.png" class="d-inline">
+    <span class="badge badge-Ongoing d-inline">ONGOING</span><br>
+    <img src="../icons/marker-gray.png" class="d-inline">
+    <span class="badge badge-Inactive d-inline">INACTIVE</span>
+  
+</div>
+    <img src="../img/LOGO.png" id="logo">
+<ul class="d-none">
+{{#each protests}}
+    <li class="lat">{{this.latitude}}</li>
+    <li class="lon">{{this.longitude}}</li>
+    <li class="headline">{{this.headline}}</li>
+    <li class="link">{{this.link}}</li>
+    <li class="date">{{this.date}}</li>
+    <li class="status">{{this.status}}</li>
+{{/each}}
+{{#each results}}
+    <li class="content">{{this.content}}</li>
+{{/each}}
+</ul>
+<script>
+var latitude = document.querySelectorAll('.lat');
+var longitude = document.querySelectorAll('.lon');
+var headline = document.querySelectorAll('.headline');
+var link = document.querySelectorAll('.link');
+var content = document.querySelectorAll('.content');
+var date = document.querySelectorAll('.date');
+var stat = document.querySelectorAll('.status');
+var icon = null;
+var info = null;
+var positions = [];
+latitude.forEach(function(e,i){
+  let x = {lat:parseFloat(e.innerHTML),lng:parseFloat(e.innerHTML)}
+  positions.push(x)
+})
+console.log(positions)
+console.log(latitude[0].innerHTML)
+// console.log(longitude)
+function myMap() {
+var mapProp= {
+  center:new google.maps.LatLng(51.508742,-0.120850),
+  zoom:2,
+  mapTypeControl: false,
+  styles: [
+  {
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#1d2c4d"
+      }
+    ]
+  },
+  {
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#8ec3b9"
+      }
+    ]
+  },
+  {
+    "elementType": "labels.text.stroke",
+    "stylers": [
+      {
+        "color": "#1a3646"
+      }
+    ]
+  },
+  {
+    "featureType": "administrative",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "administrative.country",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#333227"
+      }
+    ]
+  },
+  {
+    "featureType": "administrative.country",
+    "elementType": "geometry.stroke",
+    "stylers": [
+      {
+        "color": "#4b6878"
+      }
+    ]
+  },
+  {
+    "featureType": "administrative.land_parcel",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#64779e"
+      }
+    ]
+  },
+  {
+    "featureType": "administrative.province",
+    "elementType": "geometry.stroke",
+    "stylers": [
+      {
+        "color": "#4b6878"
+      }
+    ]
+  },
+  {
+    "featureType": "landscape.man_made",
+    "elementType": "geometry.stroke",
+    "stylers": [
+      {
+        "color": "#334e87"
+      }
+    ]
+  },
+  {
+    "featureType": "landscape.natural",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#023e58"
+      }
+    ]
+  },
+  {
+    "featureType": "poi",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "poi",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#283d6a"
+      }
+    ]
+  },
+  {
+    "featureType": "poi",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#6f9ba5"
+      }
+    ]
+  },
+  {
+    "featureType": "poi",
+    "elementType": "labels.text.stroke",
+    "stylers": [
+      {
+        "color": "#1d2c4d"
+      }
+    ]
+  },
+  {
+    "featureType": "poi.park",
+    "elementType": "geometry.fill",
+    "stylers": [
+      {
+        "color": "#023e58"
+      }
+    ]
+  },
+  {
+    "featureType": "poi.park",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#3C7680"
+      }
+    ]
+  },
+  {
+    "featureType": "road",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "road",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#304a7d"
+      }
+    ]
+  },
+  {
+    "featureType": "road",
+    "elementType": "labels.icon",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "road",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#98a5be"
+      }
+    ]
+  },
+  {
+    "featureType": "road",
+    "elementType": "labels.text.stroke",
+    "stylers": [
+      {
+        "color": "#1d2c4d"
+      }
+    ]
+  },
+  {
+    "featureType": "road.highway",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#2c6675"
+      }
+    ]
+  },
+  {
+    "featureType": "road.highway",
+    "elementType": "geometry.stroke",
+    "stylers": [
+      {
+        "color": "#255763"
+      }
+    ]
+  },
+  {
+    "featureType": "road.highway",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#b0d5ce"
+      }
+    ]
+  },
+  {
+    "featureType": "road.highway",
+    "elementType": "labels.text.stroke",
+    "stylers": [
+      {
+        "color": "#023e58"
+      }
+    ]
+  },
+  {
+    "featureType": "transit",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "transit",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#98a5be"
+      }
+    ]
+  },
+  {
+    "featureType": "transit",
+    "elementType": "labels.text.stroke",
+    "stylers": [
+      {
+        "color": "#1d2c4d"
+      }
+    ]
+  },
+  {
+    "featureType": "transit.line",
+    "elementType": "geometry.fill",
+    "stylers": [
+      {
+        "color": "#283d6a"
+      }
+    ]
+  },
+  {
+    "featureType": "transit.station",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#3a4762"
+      }
+    ]
+  },
+  {
+    "featureType": "water",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#0e1626"
+      }
+    ]
+  },
+  {
+    "featureType": "water",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#4e6d70"
+      }
+    ]
+  }
+],
+  streetViewControl: false,
+};
+var map = new google.maps.Map(document.getElementById("googleMap"),mapProp);
+latitude.forEach(function(x,index){
+  if(stat[index].innerHTML === 'Ongoing'){
+    icon = '../icons/marker-red.png'
+  } else {
+    icon = '../icons/marker-gray.png'
+  }
+    let latLong = {lat:parseFloat(x.innerHTML),lng:parseFloat(longitude[index].innerHTML)}
+    var marker = new google.maps.Marker({
+      position: latLong,
+      map: map,
+      icon:icon,
+    });
+    marker.setMap(map);
+    // closeButton.addListener('click', function() {
+    //   alert('!') 
+    // });
+    marker.addListener('click', function() {
+          map.setCenter(marker.getPosition());
+          map.setZoom(5);
+          infowindow.open(marker.get('map'), marker);
+          
+    });
+    var labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    // var markers = positions.map(function(location, i) {
+    //   return new google.maps.Marker({
+    //     position: location,
+    //     label: labels[i % labels.length]
+    //   });
+    // });
+      // var markerCluster = new MarkerClusterer(map, markers,
+      // {imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m'});
+    let links = link[index].innerHTML.split(',');
+    links.forEach(function(x){
+    if(x.split('.',2)[1] === 'youtube'){
+    info = "<h6>" + headline[index].innerHTML + "</h6><p class='text-muted d-inline'>"+date[index].innerHTML+" </p> <span class='badge badge-"+stat[index].innerHTML+" d-inline'> "+stat[index].innerHTML+"</span><hr><p>"+ content[index].innerHTML +"</p><iframe width='100%' height='400px' src='https://www.youtube.com/embed/"+x.split('=',2)[1]+"?rel=0&amp;&showinfo=0&cc_load_policy=1&cc_lang_pref=en' frameborder='0' allow='accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture' allowfullscreen></iframe>";
+    } else {
+    info = "<h6>" + headline[index].innerHTML + "</h6><p class='text-muted d-inline'>"+date[index].innerHTML+" </p> <span class='badge badge-"+stat[index].innerHTML+" d-inline'> "+stat[index].innerHTML+"</span><hr><p>"+ content[index].innerHTML +"</p><a href="+link[index].innerHTML+" class='text-muted'> More... </a> ";
+    }
+    })
+    // console.log(content);
+    var infowindow = new google.maps.InfoWindow({
+        content: info
+    });
+})
+}
+
+</script>
+<script src="https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/markerclusterer.js"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDul66GQ5TZJSdimbfAxtIU7Ps-YfsoEUc&callback=myMap"></script>

@@ -1,0 +1,35 @@
+{
+  "name": "protestradar",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "dependencies": {
+    "@vitalets/google-translate-api": "^2.7.0",
+    "all-the-cities": "^2.0.1",
+    "cities.json": "^1.1.5",
+    "express": "^4.16.4",
+    "express-handlebars": "^3.0.1",
+    "google-translate-api": "^2.3.0",
+    "languagedetect": "^1.2.0",
+    "mongoose": "^4.13.17",
+    "morgan": "^1.9.1",
+    "node-geocoder": "^3.22.0",
+    "nodemailer": "^5.1.1",
+    "rss-parser": "^3.6.2",
+    "translate-api": "^0.3.18"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nkvnl/protestradar.git"
+  },
+  "author": "Niek van Losenoord",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Nkvnl/protestradar/issues"
+  },
+  "homepage": "https://github.com/Nkvnl/protestradar#readme"
+}

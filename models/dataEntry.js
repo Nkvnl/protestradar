@@ -9,7 +9,9 @@ var dataEntrySchema = new mongoose.Schema({
     event: {default:'N/A',required:true, type:String},
     place: {default:'N/A',required:true, type:String},
     status: {default:'pending', type:String},
-    locationInfo: {Type:Object}
+    latitude: {Type:String},
+    longitude: {Type:String},
+    GPID: {type:String}
 });
 
 module.exports = mongoose.model("dataEntry", dataEntrySchema);

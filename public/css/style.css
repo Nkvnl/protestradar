@@ -1,0 +1,104 @@
+body{
+    width:100vw;
+    height:100%;
+    padding:0;
+    margin:0;
+    background:#0E1626;
+    overflow-x: hidden!important;
+}
+
+hr{
+    border:1px solid white;
+}
+
+.badge{
+    font-family: Montserrat;
+    border-radius:0;
+    text-transform: uppercase;
+}
+
+.badge-light{
+    color:#023E58;
+}
+
+.badge-Ongoing{
+    color:white;
+    background:#FF0000;
+}
+
+.badge-Inactive{
+    color:white;
+    background:#333333;
+}
+
+.exclamation{
+    font-weight: bold;
+    font-family: Montserrat;
+    color:#FF0000;
+    
+}
+
+#logo{
+    text-align: center;
+    position: absolute;
+    bottom:-5px;
+    left:20px;
+    width:150px;
+    /*left:50%;*/
+    /*right:50%;*/
+}
+
+#legend{
+    position: absolute;
+    top:0px;
+    left:0px;
+    /*background:#0E1626;*/
+    padding-left:30px;
+    padding-top:10px;
+    height:70px;
+    width:150px;
+}
+
+#list::-webkit-scrollbar { 
+    width: 0 !important; 
+}
+
+
+#header{
+    height:10vh;
+    background:#0E1626;
+}
+
+#sidebar{
+    border-left:4px solid white;
+}
+
+
+.place{
+    text-transform: uppercase;
+}
+
+#list{
+    height:90vh;
+    overflow-y: scroll!important;
+    overflow-x: hidden!important;
+}
+
+#sidebar .row{
+    border-left:15px solid grey;
+    color:white;
+    background:#0E1626;
+    /*overflow-x: hidden!important;*/
+    /*padding:15px;*/
+}
+
+#sidebar .row:hover .row{
+    border-left:10px solid white;
+}
+
+/*EDIT*/
+#edit-box{
+    text-align: center;
+    margin-top:40vh;
+    height:20vh;
+}

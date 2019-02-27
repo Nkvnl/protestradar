@@ -1,0 +1,12 @@
+
+    <div class="col-md-6 mx-auto" id="edit-box">
+        <form action="send" method="POST">
+            {{!--<h5 class="text-light">ID - {{edit._id}}--}}
+            {{!--<br>TITLE - {{edit.headline}}<br>--}}
+            {{!--LOCATION - {{edit.place}}</h5>--}}
+            <input type="text" name="place"><br>
+            <input type="hidden" name="id" value="{{edit._id}}">
+            
+            <button class="btn btn-light m-2" type="submit">Submit</button>
+        </form>
+    </div>

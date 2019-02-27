@@ -1,0 +1,43 @@
+<div class="text-center" id="header">
+    <img src="../img/protestradar.png" class="img-fluid">
+</div>
+<div id="list" class="">
+{{#each protests}}
+    <div class="row">
+        <div class="col-12 p-0">
+            <span class="badge badge-{{this.status}} d-inline">
+                {{this.status}} 
+            </span>
+            <span class="badge badge-light place d-inline mx-1">
+                {{this._id}} 
+            </span><br>
+            <span class="badge">
+               <span class="exclamation">!</span> 
+               <span class="count">{{this.count}}</span>
+               <span class="report">REPORTS</span>
+            </span>
+            <h6>
+                {{this.headline}}
+            </h6>
+            <small> 
+                {{this.from}} - {{this.untill}}
+                <br> 
+            </small> 
+            <hr>
+        </div>
+        {{!--<div class="col-2">--}}
+            {{!--<span class="badge badge-light">V</span>--}}
+        {{!--</div>--}}
+    </div>
+{{/each}}
+</div>
+
+<script>
+    var count = document.querySelectorAll('.count')
+    var report = document.querySelectorAll('.report')
+    count.forEach(function(e,i){
+        if(e.innerHTML == 1){
+          report[i].innerHTML = 'REPORT' 
+        }
+    })
+</script>
