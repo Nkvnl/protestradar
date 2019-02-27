@@ -6,6 +6,7 @@ const rssFeeds = require('./data/feeds.js');
 const keyWordsArr = require('./data/keywords.js');
 //MODELS
 const dataEntry = require("./models/dataEntry");
+const sourcesDataEntry = require("./models/sourcesData");
 //GEOCODER API
 var options = {
   provider: 'google',
@@ -29,21 +30,24 @@ const nodemailer = require("nodemailer");
 const Parser = require('rss-parser');
 const parser = new Parser({maxRedirects: 100});
 //GLOBAL VARIABLES
+var day = 86400000;
+var tenMinutes = 600000;
 var result = [];
 var protestsArr = [];
 var filteredArr = [];
 var dataEntryObj = {};
-// var day = 86400000;
+var source = null;
 var translateCount = 0;
-var day = 864;
 var timeOut = {status:false,count:0,timer:1000};
 var count = 0;
 var a = null;
+var b = null;
 var scanCount = 0;
 var type = null;
 var link = null;
 var checkDupeTitle = null;
 var fullHeadline = null;
+var fullContent = null;
 var returnedValue = null;
 var today = new Date();
 var timeStamp = today.getTime();
@@ -52,7 +56,7 @@ var time = today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds(
 var date = date+' '+time;
 var app = express();
 //DATABASE SETUP
-mongoose.connect("mongodb://protestradar.com:fVEhZm2ZbqFZveE@ds349045.mlab.com:49045/protests");
+mongoose.connect("mongodb://protestradar.com:fVEhZm2ZbqFZveE@ds349045.mlab.com:49045/protests",{ useMongoClient: true });
 //APP SETUP
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
@@ -61,69 +65,22 @@ app.set('view engine', '.hbs');
 app.use(logger('dev'));
 app.use(express.static(path.join(__dirname, 'public')));
 //INTERVAL
-setInterval(feedData,600000);
-// setInterval(setToExpired,600000);
+// setInterval(feedData,tenMinutes);
+// setInterval(checkAge,tenMinutes);
 //ROUTES
-
-function detectLanguage(input){
-  let a = lngDetector.detect(input);
-  if(a !== undefined || !a){
-  let language = a[0][0];
-      translateCount++
-  if(language === 'french'|| language === 'italian' || language === 'portuguese' || language === 'german' || language === 'dutch' || language === 'spanish'){
-    setTimeout(function() {
-      if(timeOut.status === false){
-      return translateText(language,input);
-      }
-    }, 1000 * translateCount)
-  } else if(timeOut.status === true) {
-    checkTimeout();
-  }
-  } else {
-    return undefined;
-  }
-}
-
-var f = citiesArr.splice(1,1)
-console.log(f)
-
-function checkTimeout(){
-  setTimeout(function() {
-    timeOut.status = false;
-    timeOut.timer = 1000;
-  },100000)
-}
-
-function translateText(language,input){
-  a++
-  translate(input, {from: language, to: 'en'}).then(res => {
-      console.log(res.from.text.value);
-      return res.from.text.value;
-  }).catch(err => {
-    if(err.code === 'BAD_REQUEST'){
-      console.log(err.code)
-      console.log(timeOut.status)
-      timeOut.status = true;
-      timeOut.timer = 100000;
-      timeOut.count++
-      return input
-    } else {
-      console.log(err)
-      return input
-    }
-  });
-}
 
 app.get('/', function(req, res, next){
   dataEntry.aggregate(
      {
-      $match : {$or:[{status:'Ongoing'},{status:'Inactive'}]}},
+      $match : {$or:[{status:'Inactive'},{status:'Ongoing'}]}
+     },
       { $group:{"_id": "$place", 
       count:{$sum:1},
       headline:{$first:"$headline"},
       status:{$first:"$status"},
       latitude:{$first:"$latitude"},
       longitude:{$first:"$longitude"},
+      timeStamp:{$first:"$timeStamp"},
       link:{$push:"$link"},
       from:{$first:"$date"},
       untill:{$last:"$date"}
@@ -182,72 +139,52 @@ app.get('/decline/:id',function(req,res){
   })
 });
 //FUNCTIONS
-function findAndRemove(input){
-  var found = citiesArr.find(function(element) {
-    return element === input
-  });
-  if(found){
-  let a = citiesArr.indexOf(found)
-  citiesArr.splice(a,1)
-  }
-}
-
 function feedData(){
   scanCount++
-  console.log('Scanning for protests... #' + scanCount + " @" + date )
+  console.log('Scanning for protests... #' + scanCount + " first @ " + date)
 rssFeeds.forEach(function(elem){
 (async () => {
   try{
   let feed = await parser.parseURL(elem);
   feed.items.forEach(item => {
-    // if(timeOut.status === true){
-      // console.log('no translation')
-    returnedValue = checkString(item.title)
-    // } else {
-    // let translatedText = detectLanguage(item.title)
-    // returnedValue = checkString(translatedText)
-    // if(translatedText === undefined || returnedValue === undefined){};
-    // }
-    if(item.date){
-    let a = item.date.split('+',1);
-    date = a[0].replace(/T|Z/," ");
-    } 
-    if(returnedValue.length >= 2 && returnedValue[0].type !== returnedValue[1].type){
-      dataEntryObj = {date : date,timeStamp:timeStamp,headline : item.title,link : item.link, content:item.contentSnippet};
-      if(returnedValue[0].type === 'City'){
-        dataEntryObj.place = returnedValue[0].found; 
-        dataEntryObj.event = returnedValue[1].found; 
+    dataEntry.find({headline:item.title},function(err,res){
+      if(err){
+        console.log(err)
+      } else if(res && res.length > 0){
+        return undefined
       } else {
-        dataEntryObj.place = returnedValue[1].found; 
-        dataEntryObj.event = returnedValue[0].found; 
-      }
-      find(dataEntryObj)
-    };
-      empty()
-  });
-  } catch(err){
+        returnedValue = checkString(item.title, item.contentSnippet);
+        if(item.date){
+        let a = item.date.split('+',1);
+        date = a[0].replace(/T|Z/," ");
+        } 
+        if(returnedValue && returnedValue.length >= 2 && returnedValue[0].type !== returnedValue[1].type){
+          var newSourcesDataEntry = new sourcesDataEntry({
+            source:item.link.split('.',2)[1],
+          });
+          newSourcesDataEntry.save(function(err,res) {});
+          dataEntryObj = {date : date,timeStamp:timeStamp,headline : item.title,link : item.link, content:item.contentSnippet};
+          if(returnedValue[0].type === 'City'){
+            dataEntryObj.place = returnedValue[0].found; 
+            dataEntryObj.event = returnedValue[1].found; 
+          } else {
+            dataEntryObj.place = returnedValue[1].found; 
+            dataEntryObj.event = returnedValue[0].found; 
+          }
+            saveToDB(dataEntryObj)
+          };
+            empty()
+          }
+        })
+      });
+    } catch(err){
   }
 })();
 })
 }
 
-function find(dataEntryObj){
-    dataEntry.find({headline:dataEntryObj.headline},function(err,res){
-      if(!err){
-        if(res.length > 0){
-          console.log('Dupe')
-        } else {
-          return saveToDB(dataEntryObj)
-        }
-      } else {
-        console.log('Error ' + err)
-      }
-  });
-}
-
-
 function saveToDB(dataEntryObj){
-  console.log('save')
+  // console.log('Saving item...')
   var newDataEntry = new dataEntry({
     date:dataEntryObj.date,
     timeStamp:dataEntryObj.timeStamp,
@@ -268,6 +205,7 @@ function saveToDB(dataEntryObj){
 }
 
 function verification(c){
+  // console.log('Sending verification' + c.headline)
     const transporter = nodemailer.createTransport({
         host: 'smtp.gmail.com',
         port: 587,
@@ -281,7 +219,7 @@ function verification(c){
         to: 'niek_losenoord@hotmail.com',
         subject: c.headline + 'ID A7U623',
         text: '',
-        html: "<a href='https://protests-niekavanlosenoord.c9users.io/accept/" + c.id + "'>  Accept  </a><a href='https://protests-niekavanlosenoord.c9users.io/edit/" + c.id + "'>  Edit  </a> <h5>" + c.headline + "</h5><h5>" + c.link + "</h5><h5>" + c.event + "</h5><h5>" + c.place + "</h5><h5>" + c.date + "</h5><h5>" + c.content + "</h5>" 
+        html: "<a href='https://protests-niekavanlosenoord.c9users.io/accept/" + c.id + "'>  Accept  </a><br><a href='https://protests-niekavanlosenoord.c9users.io/edit/" + c.id + "'>  Edit  </a> <h5>" + c.headline + "</h5><h5>" + c.link + "</h5><h5>" + c.event + "</h5><h5>" + c.place + "</h5><h5>" + c.date + "</h5><h5>" + c.content + "</h5>" 
     };
     dataEntryObj={};
     transporter.sendMail(mailOptions, (err, info) => {
@@ -293,22 +231,20 @@ function verification(c){
     });
 }
 
-function checkString(e){
+function checkString(e,c){
   if(e){
+  b = e.split(' ')
+  if(c){
+  b = b.concat(c.split(' '));
+  }
     fullHeadline = e;
-  let arr = e.split(' ');
-    for(var x = 0; x <= arr.length ; x++){
-      check(citiesArr,arr,x)
-      check(keyWordsArr,arr,x)
+    fullContent = c;
+    for(var x = 0; x <= b.length ; x++){
+      let checkedForCities = check(citiesArr,b,x)
+      let checkedForKeywords = check(keyWordsArr,b,x)
     }
     return protestsArr;
-  } else {
-    // console.log('Undefined input')
   }
-}
-
-function dupe(b) { 
-    return b.headline === checkDupeTitle;
 }
 
 function check(findArr,arr,x){
@@ -325,71 +261,107 @@ function check(findArr,arr,x){
 
 function save(found,type){
   if(found){
-    protestsArr.push({type:type,found:found,headline:fullHeadline,date:date,link:link})
+      protestsArr.push({
+        type:type,
+        found:found,
+        content:fullContent,
+        headline:fullHeadline,
+        date:date,
+        link:link
+        
+      })
   }
 }
 
 function empty(){
   returnedValue = [];
-  // b = {};
   protestsArr = [];
 }
 //DELETE ENTRIES AFTER 24 HOURS
-function cleanDataBase(status){
-  dataEntry.find({status:status},function(err,pending){
-    if(err){
-      console.log(err)
-    }
-    if(pending){
-      pending.forEach(function(i){
-        if(i.timeStamp > i.timeStamp + day){
-          if(i.status === 'pending'){
-          dataEntry.findByIdAndDelete({_id:i.id},function(removed){
-            console.log(removed);
-          });
-          } else if(i.status === 'accepted'){
-            dataEntry.findOneAndUpdate({id:i.id},{$set:{status:'inactive'}},function(updated){
-              console.log(updated);
-            });
-          }
-        }
-      });
-    }
-  });
-}
+// function cleanDataBase(status){
+//   dataEntry.find({status:status},function(err,pending){
+//     if(err){
+//       console.log(err)
+//     }
+//     if(pending){
+//       pending.forEach(function(i){
+//         if(i.timeStamp > i.timeStamp + day){
+//           if(i.status === 'pending'){
+//           dataEntry.findByIdAndDelete({_id:i.id},function(removed){
+//             console.log(removed);
+//           });
+//           } else if(i.status === 'accepted'){
+//             dataEntry.findOneAndUpdate({id:i.id},{$set:{status:'inactive'}},function(updated){
+//               console.log(updated);
+//             });
+//           }
+//         }
+//       });
+//     }
+//   });
+// }
 
-function removeDuplicates(){
-  dataEntry.find({},function(err,allItems){
-      if(!err){
-        allItems.forEach(function(i){
-          dataEntry.find({headline:i.headline},function(err,dupe){
-          console.log(i.headline)
-            if(dupe){
-              dupe.forEach(function(y){
-                dataEntry.findByIdAndRemove({id:y.id},function(removed){
-                  console.log(removed)
-                })
-              })
-            }
-          })
-        })
-    } else {
-      console.log(err)
-    }
+
+function checkAge(){
+  dataEntry.find({status:'Ongoing'},function(err,res){
+    res.forEach(function(e,i){
+      let _24HoursAgo = Date.now() - day
+      if(_24HoursAgo > e.timeStamp){
+        setToInactive(e._id)
+      }
+    })
   })
 }
+
+function setToInactive(ID){
+  dataEntry.findByIdAndUpdate(ID,{status:'Inactive'},function(err,res){
+    console.log('saved' + res.headline)
+  })
+}
+
+function activate(){
+  dataEntry.update({status:'Inactive'},{status:'Ongoing'},function(err,res){
+    // console.log(res)
+  })
+}
+
+// activate()
+
 
 //SERVER
 app.listen(process.env.PORT, process.env.IP, function() {
     console.log("https://www.protestradar.com server online");
 })
 
+// checkAge()
 // getLocation('France')
 // feedData()
+// test()
 // removeDuplicates()
 // cleanDataBase('pending');
 
 
 
-
+function test(){
+  (async () => {
+  try{
+    let feed = await parser.parseURL('https://www.rt.com/rss/');
+  feed.items.forEach(item => {
+    console.log(item.link)
+    let dupe = dataEntry.find({headline:'Somali man who illegally entered Canada to flee Trump immigrant crackdown has refugee claim rejected'},function(err,res){
+      if(err){
+        console.log(err)
+      } else if(res && res.length > 0){
+        // console.log('Dupe ' + res.headline)
+    //     return undefined
+      } else {
+       console.log('No dupe') 
+      }
+    })
+    })
+  }catch(err){
+    console.log(err)
+  }
+  })();
+}
 

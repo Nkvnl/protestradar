@@ -23,12 +23,12 @@ hr{
 
 .badge-Ongoing{
     color:white;
-    background:#FF0000;
+    background:green;
 }
 
 .badge-Inactive{
     color:white;
-    background:#333333;
+    background:red;
 }
 
 .exclamation{
@@ -59,7 +59,7 @@ hr{
     width:150px;
 }
 
-#list::-webkit-scrollbar { 
+body::-webkit-scrollbar,#list::-webkit-scrollbar { 
     width: 0 !important; 
 }
 
